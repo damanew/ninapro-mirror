@@ -14,7 +14,7 @@ jobs:
       matrix:
         dataset:
          # - "db1"
-          - "db2"
+          - "DB2"
           # - "db3"
           # - "db4"
           # - "db5"
@@ -38,7 +38,8 @@ jobs:
         run: |
           echo "Downloading dataset: ${{ matrix.dataset }}-sub${{ matrix.subject }}.zip"
           filename=${{ matrix.dataset }}-sub${{ matrix.subject }}.zip
-          curl -o ${filename} https://ninapro.hevs.ch/files/${{ matrix.dataset }}_Preproc/s${{ matrix.subject }}_0.zip
+          
+          curl -o ${filename} https://ninapro.hevs.ch/files/${{ matrix.dataset }}_Preproc/${{ matrix.dataset }}_s${{ matrix.subject }}.zip 
           touch ${filename}
           # 输出归档前缀供下一步使用
           echo "filename=${filename}" >> $GITHUB_OUTPUT
@@ -61,8 +62,6 @@ jobs:
               --title "Release $TAG" \
               --notes "Automated release for ${{ matrix.dataset }}" \
               || true
-      - name:
-        run:
           # 2. 上传文件并覆盖已存在的同名资产
           gh release upload "$TAG" ${{ steps.process.outputs.filename }} --clobber || true
 
