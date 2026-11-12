@@ -1,0 +1,67 @@
+name: Mirror Nina Pro Data
+
+# Controls when the workflow will run
+on:
+  workflow_dispatch:
+
+jobs:
+  process-data:
+    name: Process ${{ matrix.dataset }} (Subject ${{ matrix.subject }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 120 # 增加超时时间，防止大数据集下载超时
+    strategy:
+      max-parallel: 16
+      matrix:
+        dataset:
+          - "db1"
+          - "db2"
+          - "db3"
+          - "db4"
+          - "db5"
+          - "db6"
+          - "db7"
+          - "db8"
+          - "db9"
+          - "db10"
+        subject: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77]
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Processing & Package Data
+        id: process
+        run: |
+          echo "Downloading dataset: ${{ matrix.dataset }}-sub${{ matrix.subject }}.zip"
+          filename=${{ matrix.dataset }}-sub${{ matrix.subject }}.zip
+          curl -o ${filename} https://ninapro.hevs.ch/files/${{ matrix.dataset }}_Preproc/s${{ matrix.subject }}_0.zip
+          touch ${filename}
+          # 输出归档前缀供下一步使用
+          echo "filename=${filename}" >> $GITHUB_OUTPUT
+
+      - name: Generate Version Tag
+        id: tag
+        run: |
+          TAG="v1.0.0-${{ matrix.dataset }}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+
+          # 创建 Release (如果已存在则追加文件，或者使用 --clobber 覆盖，这里假设每次都是新Tag)
+          # 1. 创建 Release (如果已存在则报错，使用 || true 忽略错误以允许重跑)
+          gh release create "$TAG" \
+              --title "Release $TAG" \
+              --notes "Automated release for ${{ matrix.dataset }}" \
+              || true
+      - name:
+        run:
+          # 2. 上传文件并覆盖已存在的同名资产
+          gh release upload "$TAG" ${{ steps.process.outputs.filename }} --clobber || true
+
